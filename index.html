@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>洛花庄园随机抽取挑战</title>
+<style>
+    :root {
+        --gold: #c9a35e;
+        --gold-bright: #e5c078;
+        --red: #6e1616;
+        --red-bright: #9e2424;
+        --bg-dark: #0a0a0c;
+        --text-light: #e8e3db;
+        --text-muted: #8a8378;
+        --panel-bg: rgba(18, 18, 20, 0.92);
+        --border-gold: rgba(201, 163, 94, 0.3);
+        --border-red: rgba(158, 36, 36, 0.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-touch-callout: none; }
+    body {
+        background-color: var(--bg-dark);
+        color: var(--text-light);
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        overflow: hidden;
+        width: 100vw; height: 100vh;
+        position: relative;
+    }
+
+    /* ============ 统一按钮风格 ============ */
+    .btn {
+        display: inline-flex; justify-content: center; align-items: center;
+        padding: 10px 24px; font-size: 15px; font-weight: bold; font-family: inherit;
+        border-radius: 4px; cursor: pointer; letter-spacing: 2px;
+        border: 1px solid transparent; transition: all 0.25s;
+        white-space: nowrap; background: transparent;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary {
+        background: linear-gradient(180deg, #8b1d1d 0%, #4a0e0e 100%);
+        border-color: var(--gold); color: var(--gold-bright);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.6), inset 0 0 10px rgba(0,0,0,0.5);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    .btn-primary:hover:not(:disabled) { 
+        background: linear-gradient(180deg, #a82a2a 0%, #5a1010 100%);
+        box-shadow: 0 0 20px rgba(201, 163, 94, 0.3), inset 0 0 10px rgba(0,0,0,0.5); 
+        color: #fff;
+    }
+    .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+    .btn-secondary {
+        background: rgba(0,0,0,0.5);
+        border-color: rgba(201, 163, 94, 0.4); color: var(--text-light);
+    }
+    .btn-secondary:hover:not(:disabled) { 
+        background: rgba(201, 163, 94, 0.1); 
+        border-color: var(--gold-bright); 
+        color: var(--gold-bright);
+    }
+    .btn-secondary:active:not(:disabled) { transform: scale(0.98); }
+    .btn-danger {
+        background: rgba(110, 22, 22, 0.2);
+        border-color: rgba(231, 76, 60, 0.5); color: #e74c3c;
+    }
+    .btn-danger:hover:not(:disabled) {
+        background: rgba(231, 76, 60, 0.2);
+        border-color: #e74c3c;
+        color: #ff6b5b;
+    }
+    .btn-sm { padding: 5px 14px; font-size: 13px; border-radius: 2px; letter-spacing: 1px; }
+    .btn-xs { padding: 4px 0; font-size: 11px; border-radius: 2px; letter-spacing: 0; width: 44px; }
+    .btn-lg { padding: 14px 50px; font-size: 22px; letter-spacing: 6px; text-indent: 6px; border-radius: 4px; }
+
+    .watermark {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: url('naraka.png'); background-size: cover; background-position: center;
+        opacity: 0.1; z-index: 0; pointer-events: none; filter: grayscale(100%) contrast(120%);
+    }
+    .watermark::after {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(circle at center, transparent 0%, var(--bg-dark) 85%);
+    }
+
+    /* ============ 主界面 ============ */
+    .main-ui {
+        position: absolute; inset: 0; z-index: 10;
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: flex-start;
+        padding: 20px 16px 14px;
+        gap: 12px;
+        overflow-y: auto;
+        transition: opacity 0.5s;
+    }
+    .main-ui::-webkit-scrollbar { width: 4px; }
+    .main-ui::-webkit-scrollbar-thumb { background: rgba(201, 163, 94, 0.3); border-radius: 2px; }
+
+    /* 标题与编辑按钮 */
+    .title-wrapper {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        flex-shrink: 0; padding: 0 20px;
+    }
+    .rolling-title {
+        font-size: 28px; font-weight: bold; color: var(--gold-bright);
+        letter-spacing: 8px; text-indent: 8px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        font-family: "STKaiti", "KaiTi", serif;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        max-width: 80vw;
+    }
+    .edit-title-btn {
+        background: transparent; border: none; color: var(--text-muted);
+        font-size: 18px; cursor: pointer; transition: all 0.2s;
+        opacity: 0.6; padding: 4px; line-height: 1;
+    }
+    .edit-title-btn:hover { color: var(--gold-bright); opacity: 1; transform: scale(1.15); }
+
+    .slot-container {
+        display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+        max-width: 900px; width: 100%;
+        flex-shrink: 0;
+    }
+    .slot-box {
+        background: var(--panel-bg); border: 1px solid var(--border-gold);
+        border-radius: 6px; padding: 16px 12px; width: 130px; text-align: center;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 4px 10px rgba(0,0,0,0.5);
+        transition: all 0.3s;
+        position: relative;
+    }
+    .slot-box::before, .slot-box::after {
+        content: ''; position: absolute; width: 4px; height: 4px; border: 1px solid var(--gold);
+        transition: all 0.3s;
+    }
+    .slot-box::before { top: 4px; left: 4px; border-right: none; border-bottom: none; }
+    .slot-box::after { bottom: 4px; right: 4px; border-left: none; border-top: none; }
+    
+    .slot-box.disabled { opacity: 0.3; border-color: #333; filter: grayscale(1); }
+    .slot-title { font-size: 13px; color: var(--gold); margin-bottom: 12px; letter-spacing: 2px; }
+    .slot-window {
+        height: 50px; overflow: hidden; position: relative;
+        display: flex; justify-content: center;
+        -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+        mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+    }
+    .slot-reel { display: flex; flex-direction: column; position: absolute; top: 0; width: 100%; }
+    .reel-item {
+        font-size: 22px; font-weight: bold; height: 50px; line-height: 50px;
+        white-space: nowrap; color: var(--text-light); text-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+
+    .main-controls { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; flex-shrink: 0; margin-top: 5px; }
+
+    /* ============ 设置栏 ============ */
+    .settings-bar {
+        width: 100%; max-width: 900px;
+        display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+        gap: 12px 20px;
+        background: rgba(14, 14, 16, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-top: 1px solid var(--border-gold);
+        border-radius: 4px;
+        padding: 12px 16px;
+        backdrop-filter: blur(8px);
+        flex-shrink: 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .sb-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .sb-title { font-size: 12px; color: var(--text-muted); letter-spacing: 1px; }
+
+    .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .toggle-item {
+        display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+        padding: 5px 12px; border-radius: 20px; font-size: 13px; color: var(--text-muted);
+        transition: all 0.2s;
+    }
+    .toggle-item.active {
+        border-color: var(--gold); color: var(--gold-bright);
+        background: rgba(158, 36, 36, 0.2);
+    }
+    .toggle-switch {
+        position: relative; width: 32px; height: 18px; background: #333;
+        border-radius: 10px; transition: 0.3s;
+    }
+    .toggle-item.active .toggle-switch { background: var(--red-bright); }
+    .toggle-switch::after {
+        content: ''; position: absolute; top: 2px; left: 2px;
+        width: 14px; height: 14px; background: #fff;
+        border-radius: 50%; transition: 0.3s;
+    }
+    .toggle-item.active .toggle-switch::after { transform: translateX(14px); }
+    .toggle-item input { display: none; }
+
+    .custom-pool-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ============ 历史面板 ============ */
+    .history-panel {
+        width: 100%; max-width: 900px;
+        background: rgba(14, 14, 16, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-top: 2px solid var(--red);
+        border-radius: 4px;
+        padding: 12px 16px;
+        display: flex; flex-direction: column; gap: 10px;
+        flex: 1 1 auto;
+        min-height: 250px; max-height: 460px;
+        overflow: hidden;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+    .history-panel-header {
+        display: flex; align-items: center; gap: 12px;
+        font-size: 15px; color: var(--gold-bright); letter-spacing: 2px;
+        flex-shrink: 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 8px;
+    }
+    .history-panel-header .btn { margin-left: auto; }
+    .round-indicator {
+        font-size: 12px; color: var(--text-light);
+        background: var(--red);
+        padding: 2px 10px; border-radius: 2px; letter-spacing: 1px;
+    }
+    .history-body {
+        flex: 1; overflow-y: auto;
+        display: flex; flex-direction: column; gap: 14px;
+        padding-right: 4px;
+    }
+    .history-body::-webkit-scrollbar { width: 4px; }
+    .history-body::-webkit-scrollbar-thumb { background: rgba(201, 163, 94, 0.2); border-radius: 2px; }
+
+    .round-group { display: flex; flex-direction: column; gap: 8px; }
+    .round-group-title {
+        font-size: 13px; color: var(--text-muted); letter-spacing: 1px;
+        display: flex; align-items: center; gap: 6px;
+        padding-left: 2px;
+    }
+    .round-group.current .round-group-title { color: var(--gold); }
+    .cur-tag {
+        font-size: 10px; background: var(--red-bright); color: var(--gold-bright);
+        padding: 1px 6px; border-radius: 2px; font-weight: bold;
+        letter-spacing: 0.5px; border: 1px solid var(--border-gold);
+    }
+    .round-cards {
+        display: flex; gap: 12px; flex-wrap: wrap;
+    }
+
+    /* 历史小卡片 */
+    .history-card {
+        flex: 0 0 auto;
+        width: 195px;
+        background: #131316;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 4px;
+        overflow: hidden;
+        transition: all 0.2s;
+        display: flex; flex-direction: column;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .round-group.current .history-card { border-color: var(--border-gold); }
+    .history-card:hover {
+        border-color: var(--gold-bright);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.8), 0 0 10px rgba(201, 163, 94, 0.1);
+    }
+    .hc-thumb {
+        position: relative;
+        width: 100%; height: 0; padding-bottom: 56.25%;
+        background-color: #050505; background-size: cover;
+        background-position: center 15%; background-repeat: no-repeat;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        cursor: pointer;
+    }
+    .hc-thumb::after {
+        content: ''; position: absolute; inset: 0;
+        background: linear-gradient(to top, rgba(19,19,22,1) 0%, rgba(19,19,22,0.2) 40%, transparent 100%);
+        pointer-events: none;
+    }
+    
+    .hc-content {
+        display: flex;
+        padding: 8px 10px;
+        gap: 10px;
+        align-items: stretch;
+    }
+    .hc-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        cursor: pointer;
+        min-width: 0;
+    }
+    .hc-name {
+        font-size: 15px; color: var(--gold-bright); font-weight: bold;
+        line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        font-family: "STKaiti", "KaiTi", serif;
+    }
+    .hc-player { font-size: 11px; color: var(--text-light); opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hc-skill { font-size: 11px; color: var(--gold); margin-top: 2px; }
+    .hc-weapon { font-size: 11px; color: #b0aba3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .hc-actions {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .history-empty {
+        color: var(--text-muted); font-size: 13px; width: 100%;
+        text-align: center; padding: 40px 0;
+    }
+
+    /* ============ 浮动按钮 ============ */
+    .float-btn {
+        position: absolute; width: 44px; height: 44px; border-radius: 4px;
+        background: rgba(10,10,12,0.8); border: 1px solid var(--border-gold);
+        display: flex; justify-content: center; align-items: center;
+        color: var(--gold); font-size: 20px; cursor: pointer; z-index: 20;
+        transition: all 0.3s; backdrop-filter: blur(4px);
+    }
+    .float-btn:hover { background: rgba(158, 36, 36, 0.4); border-color: var(--gold-bright); color: var(--gold-bright); }
+    #btn-mute { top: 16px; right: 16px; }
+    #btn-mute.muted { color: #444; border-color: #333; }
+
+    /* ============ 结果层 ============ */
+    .result-layer {
+        position: absolute; inset: 0; z-index: 50;
+        opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
+    }
+    .result-layer::before {
+        content: ''; position: absolute; inset: 0; z-index: 0; background-color: rgba(5,5,5,0.85);
+    }
+    .result-layer.active { opacity: 1; pointer-events: auto; }
+    .result-layer:not(.active) * { pointer-events: none !important; }
+
+    .result-bg {
+        position: absolute; inset: -50px; background-size: cover; background-position: center;
+        filter: blur(60px) brightness(0.3) saturate(1.2); z-index: 1;
+    }
+    .hero-img {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        object-fit: cover; object-position: center 15%; z-index: 2; transform: scale(1.3);
+        mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+    }
+    .result-layer.active .hero-img { animation: revealHero 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+    @keyframes revealHero {
+        0% { clip-path: circle(0% at 50% 40%); transform: scale(1.3); }
+        100% { clip-path: circle(150% at 50% 40%); transform: scale(1); }
+    }
+    .vignette {
+        position: absolute; inset: 0; z-index: 3; pointer-events: none;
+        background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8) 100%);
+    }
+    .bottom-panel {
+        position: absolute; bottom: 0; left: 0; width: 100%;
+        padding: 40px 0 110px 0; z-index: 10;
+        display: flex; justify-content: center; align-items: flex-end; gap: 50px;
+        background: linear-gradient(to top, rgba(5,5,5,0.95) 0%, transparent 100%);
+    }
+    .player-info { display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; transform: translateY(20px); transition: all 0.5s ease 0.2s; }
+    .result-layer.active .player-info { opacity: 1; transform: translateY(0); }
+    .player-info.hidden { display: none; }
+    .player-avatar { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; box-shadow: 0 0 15px rgba(0,0,0,0.8); }
+    .player-name { font-size: 18px; color: var(--gold-bright); font-weight: bold; text-shadow: 0 2px 4px #000; white-space: nowrap; letter-spacing: 1px; }
+
+    .items-group { display: flex; gap: 40px; }
+    .item-box { display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; transform: translateY(20px); transition: all 0.5s ease; }
+    .result-layer.active .item-box { opacity: 1; transform: translateY(0); }
+    .result-layer.active .item-box:nth-child(1) { transition-delay: 0.4s; }
+    .result-layer.active .item-box:nth-child(2) { transition-delay: 0.6s; }
+    .result-layer.active .item-box:nth-child(3) { transition-delay: 0.8s; }
+    .result-layer.active .item-box:nth-child(4) { transition-delay: 1.0s; }
+    .item-box.hidden { display: none; }
+    .item-box img { width: 110px; height: 110px; object-fit: contain; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.9)); }
+    .item-box span { font-size: 16px; color: var(--gold); font-weight: bold; text-shadow: 0 2px 4px #000; white-space: nowrap; }
+
+    .result-actions {
+        position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+        z-index: 20; display: flex; gap: 20px; opacity: 0; transition: opacity 0.5s ease 1.4s; pointer-events: none;
+    }
+    .result-layer.active .result-actions { opacity: 1; pointer-events: auto; }
+
+    /* ============ 弹窗 ============ */
+    .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 100; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-content { background: #111113; border: 1px solid var(--border-gold); border-radius: 4px; width: 90%; max-width: 640px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.9); transform: translateY(20px); transition: transform 0.3s; }
+    .modal-overlay.active .modal-content { transform: translateY(0); }
+    .modal-header { padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 19px; color: var(--gold-bright); font-weight: bold; letter-spacing: 1px; }
+    .close-btn { cursor: pointer; font-size: 24px; color: var(--text-muted); transition: color 0.3s; line-height: 1; }
+    .close-btn:hover { color: var(--red-bright); }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .modal-footer { padding: 18px 20px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
+
+    /* 输入框样式 */
+    .modal-input {
+        width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border-gold);
+        color: var(--gold-bright); padding: 12px; border-radius: 4px; font-size: 16px;
+        outline: none; font-family: inherit; transition: border-color 0.3s;
+    }
+    .modal-input:focus { border-color: var(--gold-bright); }
+
+    .player-row { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); padding: 10px; border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 10px; }
+    .player-avatar-preview { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #222; border: 1px solid var(--gold); }
+    .player-row input[type="text"] { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-light); padding: 8px; border-radius: 2px; outline: none; min-width: 0; }
+    .player-row input[type="text"]:focus { border-color: var(--gold); }
+    .btn-add-player { background: rgba(255,255,255,0.03); border: 1px dashed var(--border-gold); color: var(--gold); padding: 12px; border-radius: 4px; cursor: pointer; text-align: center; width: 100%; margin-top: 10px; font-size: 14px; transition: all 0.2s; }
+    .btn-add-player:hover { background: rgba(201,163,94,0.1); }
+
+    /* 分组选择器样式 */
+    .roster-selector { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; flex-wrap: wrap; }
+    .rs-label { font-size: 14px; color: var(--text-muted); white-space: nowrap; }
+    .form-select {
+        background: rgba(0,0,0,0.5); border: 1px solid var(--border-gold);
+        color: var(--gold-bright); padding: 8px 12px; border-radius: 4px;
+        outline: none; font-family: inherit; font-size: 14px; cursor: pointer;
+        flex: 1; max-width: 180px; transition: border 0.3s;
+    }
+    .form-select:focus { border-color: var(--gold-bright); }
+
+    .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+    .chk-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-light); }
+    .chk-item input { accent-color: var(--red-bright); width: 16px; height: 16px; }
+
+    /* 全部记录弹窗 */
+    .history-list { display: flex; flex-direction: column; gap: 18px; }
+    .h-round-group { display: flex; flex-direction: column; gap: 8px; }
+    .h-round-title {
+        font-size: 14px; color: var(--gold); letter-spacing: 1px;
+        display: flex; align-items: center; gap: 6px;
+        padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .h-round-title.current { color: var(--gold-bright); }
+    .history-item {
+        display: flex; justify-content: flex-start; align-items: center; gap: 12px;
+        background: rgba(255,255,255,0.02); padding: 10px 14px;
+        border-radius: 4px; border-left: 2px solid var(--red);
+        transition: background 0.2s;
+        border-top: 1px solid rgba(255,255,255,0.02);
+    }
+    .history-item:hover { background: rgba(255,255,255,0.06); }
+    .h-round-group.current .history-item { border-left-color: var(--gold); }
+    .hi-thumb {
+        width: 86px; height: 48px; border-radius: 2px;
+        background-color: #000; background-size: cover; background-position: center 20%;
+        flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .history-info { font-size: 14px; line-height: 1.6; color: var(--text-muted); flex: 1; min-width: 0; }
+    .history-info strong { color: var(--text-light); font-size: 15px; }
+    .history-info em { color: var(--gold); font-style: normal; }
+    .history-info .hi-detail { display: block; font-size: 12px; color: #777; margin-top: 1px; }
+    .hi-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    @media (max-width: 768px) {
+        .main-ui { padding: 12px 10px 8px; gap: 9px; }
+        .rolling-title { font-size: 20px; letter-spacing: 4px; text-indent: 4px; }
+        .slot-container { gap: 8px; }
+        .slot-box { width: calc(33.33% - 6px); padding: 10px 4px; }
+        .slot-title { font-size: 11px; margin-bottom: 6px; }
+        .slot-window { height: 36px; }
+        .reel-item { font-size: 15px; height: 36px; line-height: 36px; }
+        .main-controls { width: 100%; gap: 10px; }
+        .btn-lg { flex: 1; padding: 12px 0; font-size: 17px; letter-spacing: 3px; text-indent: 3px; }
+        .settings-bar { padding: 8px 10px; gap: 8px 12px; }
+        .sb-title { display: none; }
+        .toggle-item { padding: 4px 8px; font-size: 12px; }
+        .toggle-switch { width: 28px; height: 16px; }
+        .toggle-switch::after { width: 12px; height: 12px; }
+        .toggle-item.active .toggle-switch::after { transform: translateX(12px); }
+        .history-panel { padding: 8px 10px; min-height: 230px; max-height: 420px; }
+        
+        .history-card { width: 175px; }
+        .hc-content { padding: 6px 8px; gap: 6px; }
+        .hc-name { font-size: 14px; }
+        .btn-xs { width: 38px; padding: 4px 0; font-size: 10px; }
+        
+        .bottom-panel { flex-direction: column; align-items: center; gap: 18px; padding: 30px 0 100px 0; }
+        .player-info { flex-direction: row; gap: 15px; }
+        .player-avatar { width: 50px; height: 50px; }
+        .items-group { gap: 15px; flex-wrap: wrap; justify-content: center; }
+        .item-box img { width: 70px; height: 70px; }
+        .item-box span { font-size: 14px; }
+        .float-btn { width: 38px; height: 38px; font-size: 18px; }
+        .result-actions { bottom: 16px; }
+        .result-actions .btn { padding: 12px 40px; font-size: 17px; }
+        .hi-thumb { width: 68px; height: 38px; }
+
+        /* 移动端弹窗底部按钮适配 */
+        .roster-selector { flex: 1 1 100%; }
+        .modal-footer { justify-content: flex-end; gap: 10px; }
+    }
+</style>
+</head>
+<body>
+
+<div class="watermark"></div>
+
+<div class="float-btn" id="btn-mute" title="静音">🔊</div>
+
+<div class="main-ui" id="main-ui">
+    <!-- 标题与编辑按钮 -->
+    <div class="title-wrapper">
+        <span id="main-title" class="rolling-title">洛花庄园随机抽取挑战</span>
+        <button class="edit-title-btn" onclick="openTitleModal()" title="修改标题">✎</button>
+    </div>
+
+    <div class="slot-container">
+        <div class="slot-box" id="slot-player"><div class="slot-title">选手</div><div class="slot-window"><div class="slot-reel" id="reel-player"><div class="reel-item">-</div></div></div></div>
+        <div class="slot-box" id="slot-hero"><div class="slot-title">英雄</div><div class="slot-window"><div class="slot-reel" id="reel-hero"><div class="reel-item">-</div></div></div></div>
+        <div class="slot-box" id="slot-skill"><div class="slot-title">技能 F</div><div class="slot-window"><div class="slot-reel" id="reel-skill"><div class="reel-item">-</div></div></div></div>
+        <div class="slot-box" id="slot-ult"><div class="slot-title">奥义 V</div><div class="slot-window"><div class="slot-reel" id="reel-ult"><div class="reel-item">-</div></div></div></div>
+        <div class="slot-box" id="slot-near"><div class="slot-title" id="title-near">近战武器</div><div class="slot-window"><div class="slot-reel" id="reel-near"><div class="reel-item">-</div></div></div></div>
+        <div class="slot-box" id="slot-far"><div class="slot-title" id="title-far">远程武器</div><div class="slot-window"><div class="slot-reel" id="reel-far"><div class="reel-item">-</div></div></div></div>
+    </div>
+
+    <div class="main-controls">
+        <button class="btn btn-primary btn-lg" id="start-btn">开始抽取</button>
+        <button class="btn btn-secondary btn-lg" id="btn-new-round">开启新一轮</button>
+    </div>
+
+    <!-- 设置栏 -->
+    <div class="settings-bar">
+        <div class="sb-section">
+            <span class="sb-title">抽取项目</span>
+            <div class="toggle-group">
+                <label class="toggle-item active"><input type="checkbox" id="chk-player" checked> 选手 <span class="toggle-switch"></span></label>
+                <label class="toggle-item active"><input type="checkbox" id="chk-skill" checked> 技能F <span class="toggle-switch"></span></label>
+                <label class="toggle-item active"><input type="checkbox" id="chk-ult" checked> 奥义V <span class="toggle-switch"></span></label>
+                <label class="toggle-item active"><input type="checkbox" id="chk-near" checked> 近战 <span class="toggle-switch"></span></label>
+                <label class="toggle-item active"><input type="checkbox" id="chk-far" checked> 远程 <span class="toggle-switch"></span></label>
+            </div>
+        </div>
+        <div class="sb-section">
+            <span class="sb-title">规则</span>
+            <div class="toggle-group">
+                <label class="toggle-item"><input type="checkbox" id="sw-player-no-repeat"> 选手不重复 <span class="toggle-switch"></span></label>
+                <label class="toggle-item"><input type="checkbox" id="sw-hero-no-repeat"> 英雄不重复 <span class="toggle-switch"></span></label>
+                <label class="toggle-item"><input type="checkbox" id="sw-dual-wield"> 双刀流 <span class="toggle-switch"></span></label>
+            </div>
+        </div>
+        <div class="sb-section">
+            <span class="sb-title">抽取池</span>
+            <div class="custom-pool-btns">
+                <button class="btn btn-secondary btn-sm" onclick="openPlayerModal()" title="添加或编辑选手，可上传头像">自定义选手</button>
+                <button class="btn btn-secondary btn-sm" onclick="openPoolModal('hero')">自定义英雄</button>
+                <button class="btn btn-secondary btn-sm" onclick="openPoolModal('near')">自定义近战</button>
+                <button class="btn btn-secondary btn-sm" onclick="openPoolModal('far')">自定义远程</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 历史面板 -->
+    <div class="history-panel">
+        <div class="history-panel-header">
+            <span>抽取历史</span>
+            <span class="round-indicator" id="round-indicator">第 1 轮</span>
+            <button class="btn btn-secondary btn-sm" onclick="openHistoryModal()">全部记录</button>
+        </div>
+        <div class="history-body" id="main-history-list"></div>
+    </div>
+</div>
+
+<!-- 结果层 -->
+<div class="result-layer" id="result-layer">
+    <div class="result-bg" id="result-bg"></div>
+    <img class="hero-img" id="hero-img" src="" alt="Hero">
+    <div class="vignette"></div>
+    <div class="bottom-panel">
+        <div class="player-info" id="player-info">
+            <img class="player-avatar" id="player-avatar" src="">
+            <div class="player-name" id="player-name"></div>
+        </div>
+        <div class="items-group">
+            <div class="item-box" id="item-skill"><img id="img-skill" src=""><span id="text-skill"></span></div>
+            <div class="item-box" id="item-ult"><img id="img-ult" src=""><span id="text-ult"></span></div>
+            <div class="item-box" id="item-near"><img id="img-near" src=""><span id="text-near"></span></div>
+            <div class="item-box" id="item-far"><img id="img-far" src=""><span id="text-far"></span></div>
+        </div>
+    </div>
+    <div class="result-actions">
+        <button class="btn btn-secondary btn-lg" id="btn-back">返回主页</button>
+    </div>
+</div>
+
+<!-- 修改标题弹窗 -->
+<div class="modal-overlay" id="title-modal">
+    <div class="modal-content" style="max-width: 420px;">
+        <div class="modal-header"><span>修改标题</span><span class="close-btn" onclick="toggleModal('title-modal', false)">×</span></div>
+        <div class="modal-body">
+            <input type="text" id="title-input" class="modal-input" maxlength="24" placeholder="请输入新标题...">
+        </div>
+        <div class="modal-footer" style="justify-content: flex-end; gap: 10px;">
+            <button class="btn btn-secondary" onclick="toggleModal('title-modal', false)">取消</button>
+            <button class="btn btn-primary" onclick="saveTitle()">确认修改</button>
+        </div>
+    </div>
+</div>
+
+<!-- 自定义选手弹窗（集成分组选择与删除） -->
+<div class="modal-overlay" id="player-modal">
+    <div class="modal-content">
+        <div class="modal-header"><span>自定义选手名单</span><span class="close-btn" onclick="toggleModal('player-modal', false)">×</span></div>
+        <div class="modal-body" id="player-manage-list"></div>
+        <div class="modal-footer">
+            <div class="roster-selector">
+                <span class="rs-label">当前分组:</span>
+                <select id="roster-select" class="form-select" onchange="handleRosterChange(this.value)"></select>
+                <button class="btn btn-danger btn-sm" id="btn-del-roster" onclick="deleteCurrentRoster()" title="删除当前选中的分组">删除此组</button>
+            </div>
+            <button class="btn btn-primary" onclick="savePlayerList()">保存并应用</button>
+        </div>
+    </div>
+</div>
+
+<!-- 自定义池弹窗 -->
+<div class="modal-overlay" id="pool-modal">
+    <div class="modal-content">
+        <div class="modal-header"><span id="pool-title">选择抽取池</span><span class="close-btn" onclick="toggleModal('pool-modal', false)">×</span></div>
+        <div class="modal-body">
+            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="toggleAllPool(true)">全选</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleAllPool(false)">全不选</button>
+            </div>
+            <div class="grid-list" id="pool-list"></div>
+        </div>
+        <div class="modal-footer" style="justify-content: flex-end;"><button class="btn btn-primary" onclick="savePool()">确认应用</button></div>
+    </div>
+</div>
+
+<!-- 全部历史弹窗 -->
+<div class="modal-overlay" id="history-modal">
+    <div class="modal-content">
+        <div class="modal-header"><span>抽取历史记录</span><span class="close-btn" onclick="toggleModal('history-modal', false)">×</span></div>
+        <div class="modal-body"><div class="history-list" id="history-list"></div></div>
+        <div class="modal-footer" style="justify-content: flex-end;"><button class="btn btn-secondary" onclick="clearHistory()">清空记录</button></div>
+    </div>
+</div>
+
+<script>
+    const HERO_DATA = {
+        "崔三娘": { f: ["F1", "F2"], v: ["V1", "V2"] }, "甘璇": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "顾清寒": { f: ["F1", "F2"], v: ["V1", "V2"] }, "哈迪": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "胡桃": { f: ["F1", "F2"], v: ["V1", "V2"] }, "胡为": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "季沧海": { f: ["F1", "F2"], v: ["V1", "V2"] }, "季莹莹": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "迦南": { f: ["F1", "F2"], v: ["V1", "V2"] }, "蓝梦": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "李寻欢": { f: ["F1", "F2"], v: ["V1", "V2"] }, "刘炼": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "南宫锦": { f: ["F1", "F2"], v: ["V1", "V2"] }, "宁红夜": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "沈妙": { f: ["F1", "F2"], v: ["V1", "V2"] }, "特木尔": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "天海": { f: ["F1", "F2"], v: ["V1", "V2"] }, "万钧": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "魏轻": { f: ["F1", "F2"], v: ["V1", "V2"] }, "巫真": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "无尘": { f: ["F1", "F2"], v: ["V1", "V2"] }, "武田信忠": { f: ["F1", "F2", "F3"], v: ["V1", "V2", "V3"] },
+        "席拉": { f: ["F1", "F2"], v: ["V1", "V2"] }, "妖刀姬": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "叶修": { f: ["F1", "F2"], v: ["V1", "V2"] }, "殷紫萍": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "玉玲珑": { f: ["F1", "F2"], v: ["V1", "V2"] }, "岳山": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "张起灵": { f: ["F1", "F2"], v: ["V1", "V2"] },
+        "云庆": { f: ["F1", "F2"], v: ["V1", "V2"] }
+    };
+    const ALL_HEROES = Object.keys(HERO_DATA);
+    const ALL_NEAR = ["匕首", "飞刀", "棍", "横刀", "阔刀", "链剑", "千机伞", "枪", "拳刃", "扇", "双刀", "双戟", "双节棍", "太刀", "斩马刀", "长剑"];
+    const ALL_FAR = ["弓箭", "火炮", "连弩", "鸟铳", "双铳", "五眼铳"];
+    const PATHS = { hero: "heros/", skill: "skills/", ult: "Truth/", near: "near/", far: "Far/", audio: "audio/" };
+
+    const DEFAULT_AVATAR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+    let playersList = [
+        { name: "选手A", avatar: DEFAULT_AVATAR },
+        { name: "选手B", avatar: DEFAULT_AVATAR }
+    ];
+    const savedPlayers = localStorage.getItem('naraka_players');
+    if (savedPlayers) { try { playersList = JSON.parse(savedPlayers); } catch(e) {} }
+
+    let rosterGroups = [];
+    let currentRosterId = 'temp'; // 当前正在编辑的分组ID
+
+    function loadRosters() {
+        const saved = localStorage.getItem('naraka_rosters');
+        if (saved) {
+            try { rosterGroups = JSON.parse(saved); } catch(e) { rosterGroups = []; }
+        }
+        if (!rosterGroups || rosterGroups.length === 0) {
+            if (playersList && playersList.length > 0) {
+                rosterGroups = [{ id: 'default', name: '默认名单', players: JSON.parse(JSON.stringify(playersList)) }];
+                saveRosters();
+            }
+        }
+    }
+    function saveRosters() {
+        localStorage.setItem('naraka_rosters', JSON.stringify(rosterGroups));
+    }
+
+    let activeHeroes = [...ALL_HEROES];
+    let activeNear = [...ALL_NEAR];
+    let activeFar = [...ALL_FAR];
+
+    let config = { player: true, skill: true, ult: true, near: true, far: true, noRepeatPlayer: false, noRepeatHero: false, dualWield: false };
+    let usedPlayers = [];
+    let usedHeroes = [];
+    let currentRound = 1;
+
+    let isMuted = false;
+    let currentAudio = null;
+    let isRolling = false;
+    let currentResult = null;
+
+    /* ================= 基础 UI & 标题编辑 ================= */
+    document.querySelectorAll('.toggle-item input[type="checkbox"]').forEach(checkbox => {
+        const label = checkbox.closest('.toggle-item');
+        label.classList.toggle('active', checkbox.checked);
+        checkbox.addEventListener('change', () => {
+            label.classList.toggle('active', checkbox.checked);
+            readConfig();
+        });
+    });
+
+    const btnMute = document.getElementById('btn-mute');
+    btnMute.addEventListener('click', () => {
+        isMuted = !isMuted;
+        btnMute.innerText = isMuted ? '🔇' : '🔊';
+        btnMute.classList.toggle('muted', isMuted);
+        if (currentAudio) currentAudio.muted = isMuted;
+    });
+
+    function toggleModal(id, show) { document.getElementById(id).classList.toggle('active', show); }
+    function openHistoryModal() { renderHistory(); toggleModal('history-modal', true); }
+
+    function readConfig() {
+        config.player = document.getElementById('chk-player').checked;
+        config.skill = document.getElementById('chk-skill').checked;
+        config.ult = document.getElementById('chk-ult').checked;
+        config.near = document.getElementById('chk-near').checked;
+        config.far = document.getElementById('chk-far').checked;
+        config.noRepeatPlayer = document.getElementById('sw-player-no-repeat').checked;
+        config.noRepeatHero = document.getElementById('sw-hero-no-repeat').checked;
+        config.dualWield = document.getElementById('sw-dual-wield').checked;
+        syncSlotUI();
+    }
+
+    function syncSlotUI() {
+        ['player', 'skill', 'ult', 'near', 'far'].forEach(key => {
+            const el = document.getElementById('slot-' + key);
+            if (el) { if (config[key]) el.classList.remove('disabled'); else el.classList.add('disabled'); }
+        });
+        document.getElementById('title-near').innerText = config.dualWield ? '近战1' : '近战武器';
+        document.getElementById('title-far').innerText = config.dualWield ? '近战2' : '远程武器';
+    }
+
+    /* ================= 轮次系统 ================= */
+    function updateRoundIndicator() {
+        document.getElementById('round-indicator').innerText = '第 ' + currentRound + ' 轮';
+    }
+
+    function startNewRound() {
+        currentRound++;
+        usedPlayers = [];
+        usedHeroes = [];
+        updateRoundIndicator();
+    }
+
+    function checkRoundAdvance() {
+        if (config.player && config.noRepeatPlayer) {
+            if (usedPlayers.length >= playersList.length) startNewRound();
+        } else if (config.noRepeatHero) {
+            if (usedHeroes.length >= activeHeroes.length) startNewRound();
+        }
+    }
+
+    /* ================= 选手管理 & 分组 ================= */
+    const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
+
+    function openPlayerModal() {
+        currentRosterId = 'temp'; // 默认打开临时名单
+        renderRosterSelect();
+        renderPlayerList();
+        toggleModal('player-modal', true);
+    }
+
+    function renderRosterSelect() {
+        const sel = document.getElementById('roster-select');
+        const delBtn = document.getElementById('btn-del-roster');
+        if (!sel || !delBtn) return;
+        
+        let html = `<option value="temp" ${currentRosterId === 'temp' ? 'selected' : ''}>临时名单（当前生效）</option>`;
+        rosterGroups.forEach(g => {
+            html += `<option value="${g.id}" ${currentRosterId === g.id ? 'selected' : ''}>${g.name}</option>`;
+        });
+        html += `<option value="new">+ 新建分组...</option>`;
+        sel.innerHTML = html;
+
+        if (currentRosterId === 'temp' || currentRosterId === 'new') {
+            delBtn.style.display = 'none';
+        } else {
+            delBtn.style.display = 'inline-flex';
+        }
+    }
+
+    function handleRosterChange(val) {
+        if (val === 'new') {
+            const name = prompt("请输入新分组名称（如：第一波）：");
+            if (!name) {
+                document.getElementById('roster-select').value = currentRosterId;
+                return;
+            }
+            const newGroup = { id: Date.now().toString(), name, players: JSON.parse(JSON.stringify(playersList)) };
+            rosterGroups.push(newGroup);
+            saveRosters();
+            currentRosterId = newGroup.id;
+            renderRosterSelect();
+        } else if (val === 'temp') {
+            currentRosterId = 'temp';
+            renderRosterSelect();
+            renderPlayerList();
+        } else {
+            const group = rosterGroups.find(g => g.id === val);
+            if (group) {
+                currentRosterId = group.id;
+                playersList = JSON.parse(JSON.stringify(group.players));
+                renderRosterSelect();
+                renderPlayerList();
+            }
+        }
+    }
+
+    function deleteCurrentRoster() {
+        if (currentRosterId === 'temp' || currentRosterId === 'new') return;
+        const group = rosterGroups.find(g => g.id === currentRosterId);
+        if (!group) return;
+
+        if (!confirm(`确定要删除分组「${group.name}」吗？此操作不可恢复。`)) return;
+
+        rosterGroups = rosterGroups.filter(g => g.id !== currentRosterId);
+        saveRosters();
+        currentRosterId = 'temp';
+        alert(`分组「${group.name}」已删除。当前名单已转为临时状态。`);
+        renderRosterSelect();
+        renderPlayerList();
+    }
+
+    function renderPlayerList() {
+        const list = document.getElementById('player-manage-list');
+        list.innerHTML = '';
+        playersList.forEach((p, idx) => {
+            const row = document.createElement('div');
+            row.className = 'player-row';
+            row.innerHTML = `
+                <img src="${p.avatar}" class="player-avatar-preview" id="preview-${idx}">
+                <input type="text" value="${p.name}" id="name-${idx}" placeholder="选手名字">
+                <input type="file" accept="image/*" style="display:none;" id="file-${idx}" onchange="uploadAvatar(event, ${idx})">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('file-${idx}').click()">传图</button>
+                <button class="btn btn-danger btn-sm" onclick="delPlayer(${idx})">删除</button>
+            `;
+            list.appendChild(row);
+        });
+        const addBtn = document.createElement('div');
+        addBtn.className = 'btn-add-player';
+        addBtn.innerText = '+ 添加新选手';
+        addBtn.onclick = () => {
+            syncPlayerDOM();
+            playersList.push({ name: `选手${playersList.length + 1}`, avatar: DEFAULT_AVATAR });
+            renderPlayerList();
+        };
+        list.appendChild(addBtn);
+    }
+
+    function uploadAvatar(e, idx) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const img = document.getElementById(`preview-${idx}`);
+            img.src = ev.target.result;
+            img.dataset.base64 = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function syncPlayerDOM() {
+        const rows = document.querySelectorAll('.player-row');
+        if (rows.length === 0) return;
+        const newList = [];
+        rows.forEach((row, idx) => {
+            const nameEl = document.getElementById(`name-${idx}`);
+            if (!nameEl) return;
+            const name = nameEl.value.trim();
+            const preview = document.getElementById(`preview-${idx}`);
+            const avatar = preview.dataset.base64 || preview.src;
+            if (name) newList.push({ name, avatar });
+        });
+        playersList = newList;
+    }
+
+    function delPlayer(idx) { syncPlayerDOM(); playersList.splice(idx, 1); renderPlayerList(); }
+    
+    function savePlayerList() {
+        syncPlayerDOM();
+        if (playersList.length === 0) { alert("至少保留一个选手！"); return; }
+        
+        if (currentRosterId !== 'temp') {
+            const group = rosterGroups.find(g => g.id === currentRosterId);
+            if (group) group.players = JSON.parse(JSON.stringify(playersList));
+            saveRosters();
+        }
+        
+        localStorage.setItem('naraka_players', JSON.stringify(playersList));
+        usedPlayers = [];
+        toggleModal('player-modal', false);
+        alert("保存成功！");
+    }
+
+    /* ================= 抽取池管理 ================= */
+    let currentPoolType = '';
+    function openPoolModal(type) {
+        currentPoolType = type;
+        const list = document.getElementById('pool-list');
+        const title = document.getElementById('pool-title');
+        let source = [], active = [];
+        if (type === 'hero') { title.innerText = '选择英雄池'; source = ALL_HEROES; active = activeHeroes; }
+        else if (type === 'near') { title.innerText = '选择近战池'; source = ALL_NEAR; active = activeNear; }
+        else if (type === 'far') { title.innerText = '选择远程池'; source = ALL_FAR; active = activeFar; }
+        list.innerHTML = source.map(item => `<label class="chk-item"><input type="checkbox" value="${item}" ${active.includes(item) ? 'checked' : ''}> ${item}</label>`).join('');
+        toggleModal('pool-modal', true);
+    }
+    function toggleAllPool(state) { document.querySelectorAll('#pool-list input').forEach(cb => cb.checked = state); }
+    function savePool() {
+        const selected = Array.from(document.querySelectorAll('#pool-list input:checked')).map(cb => cb.value);
+        if (selected.length === 0) { alert("至少保留一个选项哦！"); return; }
+        if (currentPoolType === 'hero') { activeHeroes = selected; usedHeroes = []; }
+        else if (currentPoolType === 'near') activeNear = selected;
+        else if (currentPoolType === 'far') activeFar = selected;
+        toggleModal('pool-modal', false);
+    }
+
+    /* ================= 图片预加载 & 语音 ================= */
+    function preloadImage(url) {
+        return new Promise(resolve => {
+            if (!url) return resolve();
+            const img = new Image();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            img.src = url;
+        });
+    }
+
+    function playVoice(heroName) {
+        if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+        const voiceIdx = Math.floor(Math.random() * 2) + 1;
+        currentAudio = new Audio(`${PATHS.audio}${heroName}_${voiceIdx}.mp3`);
+        currentAudio.muted = isMuted;
+        currentAudio.play().catch(() => console.warn("语音被拦截或缺失"));
+    }
+
+    /* ================= 转盘动画 ================= */
+    function spinReel(reelId, dataList, duration) {
+        const reel = document.getElementById(reelId);
+        if (!reel || !dataList || dataList.length === 0) return;
+        const itemHeight = reel.parentElement.clientHeight || 50;
+        let html = '';
+        const spinCount = 15;
+        for (let i = 0; i < spinCount; i++) html += `<div class="reel-item">${getRandom(dataList)}</div>`;
+        html += `<div class="reel-item">${getRandom(dataList)}</div>`;
+        reel.innerHTML = html;
+        const totalDistance = -(spinCount * itemHeight);
+        reel.style.transition = 'none';
+        reel.style.transform = `translateY(0)`;
+        void reel.offsetWidth;
+        reel.style.transition = `transform ${duration}ms cubic-bezier(0.1, 0.7, 0.1, 1)`;
+        reel.style.transform = `translateY(${totalDistance}px)`;
+    }
+
+    function setReelResult(reelId, finalText) {
+        const reel = document.getElementById(reelId);
+        if (!reel) return;
+        reel.style.transition = 'none';
+        reel.innerHTML = `<div class="reel-item">${finalText || '-'}</div>`;
+        reel.style.transform = `translateY(0)`;
+    }
+
+    /* ================= 抽取主流程 ================= */
+    async function startDraw() {
+        if (isRolling) return;
+        readConfig();
+
+        if (!config.player && !config.skill && !config.ult && !config.near && !config.far) {
+            alert("至少需要勾选一项参与抽取！");
+            return;
+        }
+        if (config.player && playersList.length === 0) {
+            alert("选手名单为空，请先在「自定义选手」中添加！");
+            return;
+        }
+
+        checkRoundAdvance();
+
+        isRolling = true;
+        document.getElementById('start-btn').disabled = true;
+        document.getElementById('btn-new-round').disabled = true;
+
+        let availablePlayers = [...playersList];
+        if (config.noRepeatPlayer) {
+            availablePlayers = playersList.filter(p => !usedPlayers.includes(p.name));
+            if (availablePlayers.length === 0) availablePlayers = [...playersList];
+        }
+        const finalPlayer = config.player ? getRandom(availablePlayers) : null;
+        if (config.player && config.noRepeatPlayer && finalPlayer) usedPlayers.push(finalPlayer.name);
+
+        let availableHeroes = [...activeHeroes];
+        if (config.noRepeatHero) {
+            availableHeroes = activeHeroes.filter(h => !usedHeroes.includes(h));
+            if (availableHeroes.length === 0) { usedHeroes = []; availableHeroes = [...activeHeroes]; }
+        }
+        const finalHero = getRandom(availableHeroes);
+        if (config.noRepeatHero) usedHeroes.push(finalHero);
+
+        const finalSkill = config.skill ? getRandom(HERO_DATA[finalHero].f) : null;
+        const finalUlt = config.ult ? getRandom(HERO_DATA[finalHero].v) : null;
+        let finalNear = null, finalFar = null;
+        if (config.near) finalNear = getRandom(activeNear);
+        if (config.far) {
+            if (config.dualWield) {
+                let dualPool = [...activeNear];
+                if (finalNear && dualPool.length > 1) dualPool = dualPool.filter(w => w !== finalNear);
+                finalFar = getRandom(dualPool);
+            } else {
+                finalFar = getRandom(activeFar);
+            }
+        }
+
+        currentResult = {
+            player: finalPlayer ? finalPlayer.name : null,
+            playerAvatar: finalPlayer ? finalPlayer.avatar : null,
+            hero: finalHero, skill: finalSkill, ult: finalUlt, near: finalNear, far: finalFar,
+            isDual: config.dualWield,
+            round: currentRound,
+            time: new Date().toLocaleTimeString()
+        };
+
+        const heroUrl = `${PATHS.hero}${finalHero}.webp`;
+        const skillUrl = finalSkill ? `${PATHS.skill}${finalHero}_${finalSkill}.webp` : null;
+        const ultUrl = finalUlt ? `${PATHS.ult}${finalHero}_${finalUlt}.webp` : null;
+        const nearUrl = finalNear ? `${PATHS.near}${finalNear}.webp` : null;
+        const farUrl = finalFar ? (config.dualWield ? `${PATHS.near}${finalFar}.webp` : `${PATHS.far}${finalFar}.webp`) : null;
+
+        preloadImage(heroUrl); preloadImage(skillUrl); preloadImage(ultUrl); preloadImage(nearUrl); preloadImage(farUrl);
+
+        ['player', 'hero', 'skill', 'ult', 'near', 'far'].forEach(key => setReelResult('reel-' + key, '-'));
+
+        if (config.player) spinReel('reel-player', playersList.map(p => p.name), 600);
+        spinReel('reel-hero', activeHeroes, 800);
+
+        setTimeout(() => {
+            if (config.player) setReelResult('reel-player', currentResult.player);
+            setReelResult('reel-hero', currentResult.hero);
+            if (config.skill) spinReel('reel-skill', HERO_DATA[finalHero].f, 1000);
+            if (config.ult) spinReel('reel-ult', HERO_DATA[finalHero].v, 1300);
+            if (config.near) spinReel('reel-near', activeNear, 1600);
+            if (config.far) spinReel('reel-far', config.dualWield ? activeNear : activeFar, 1900);
+        }, 800);
+
+        setTimeout(async () => {
+            if (config.skill) setReelResult('reel-skill', currentResult.skill);
+            if (config.ult) setReelResult('reel-ult', currentResult.ult);
+            if (config.near) setReelResult('reel-near', currentResult.near);
+            if (config.far) setReelResult('reel-far', currentResult.far);
+
+            await Promise.all([
+                preloadImage(heroUrl), preloadImage(skillUrl), preloadImage(ultUrl),
+                preloadImage(nearUrl), preloadImage(farUrl)
+            ]);
+            showResult(currentResult);
+            saveHistory(currentResult);
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('btn-new-round').disabled = false;
+            isRolling = false;
+        }, 2200);
+    }
+
+    /* ================= 开启新一轮 ================= */
+    document.getElementById('btn-new-round').addEventListener('click', () => {
+        if (isRolling) return;
+        startNewRound();
+        document.querySelectorAll('.slot-reel').forEach(el => {
+            el.style.transition = 'none';
+            el.innerHTML = `<div class="reel-item">-</div>`;
+            el.style.transform = `translateY(0)`;
+        });
+        renderMainHistory();
+        alert(`已开启新一轮！当前为第 ${currentRound} 轮，去重记录已清空。`);
+    });
+
+    /* ================= 结果展示 ================= */
+    function showResult(data) {
+        const heroUrl = `${PATHS.hero}${data.hero}.webp`;
+        document.getElementById('hero-img').src = heroUrl;
+        document.getElementById('result-bg').style.backgroundImage = `url('${heroUrl}')`;
+
+        const pInfo = document.getElementById('player-info');
+        if (data.player) {
+            pInfo.classList.remove('hidden');
+            document.getElementById('player-avatar').src = data.playerAvatar || DEFAULT_AVATAR;
+            document.getElementById('player-name').innerText = data.player;
+        } else {
+            pInfo.classList.add('hidden');
+        }
+
+        const itemSkill = document.getElementById('item-skill');
+        const itemUlt = document.getElementById('item-ult');
+        const itemNear = document.getElementById('item-near');
+        const itemFar = document.getElementById('item-far');
+
+        if (data.skill) {
+            itemSkill.classList.remove('hidden');
+            document.getElementById('img-skill').src = `${PATHS.skill}${data.hero}_${data.skill}.webp`;
+            document.getElementById('text-skill').innerText = data.skill;
+        } else itemSkill.classList.add('hidden');
+
+        if (data.ult) {
+            itemUlt.classList.remove('hidden');
+            document.getElementById('img-ult').src = `${PATHS.ult}${data.hero}_${data.ult}.webp`;
+            document.getElementById('text-ult').innerText = data.ult;
+        } else itemUlt.classList.add('hidden');
+
+        if (data.near) {
+            itemNear.classList.remove('hidden');
+            document.getElementById('img-near').src = `${PATHS.near}${data.near}.webp`;
+            document.getElementById('text-near').innerText = data.near;
+        } else itemNear.classList.add('hidden');
+
+        if (data.far) {
+            itemFar.classList.remove('hidden');
+            const farBase = data.isDual ? PATHS.near : PATHS.far;
+            document.getElementById('img-far').src = `${farBase}${data.far}.webp`;
+            document.getElementById('text-far').innerText = data.far;
+        } else itemFar.classList.add('hidden');
+
+        const layer = document.getElementById('result-layer');
+        layer.classList.remove('active');
+        void layer.offsetWidth;
+        layer.classList.add('active');
+        playVoice(data.hero);
+    }
+
+    function closeResult() {
+        document.getElementById('result-layer').classList.remove('active');
+        if (currentAudio) currentAudio.pause();
+        renderMainHistory();
+    }
+
+    document.getElementById('btn-back').addEventListener('click', closeResult);
+    document.getElementById('start-btn').addEventListener('click', startDraw);
+
+    /* ================= 历史记录 ================= */
+    const STORAGE_KEY = 'naraka_history';
+
+    function saveHistory(data) {
+        let history = [];
+        try { history = JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || []; } catch(e) {}
+        history.unshift(data);
+        if (history.length > 80) history.pop();
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        renderMainHistory();
+    }
+
+    function getHistory() {
+        try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || []; } catch(e) { return []; }
+    }
+
+    function thumbStyle(heroName) {
+        const url = `${PATHS.hero}${heroName}.webp`;
+        return `background-image: linear-gradient(to top, rgba(19,19,22,1) 0%, rgba(19,19,22,0.2) 60%, transparent 100%), url('${url}');`;
+    }
+
+    function deleteHistoryItem(index) {
+        if (!confirm("确定要删除这条记录吗？")) return;
+        let history = getHistory();
+        history.splice(index, 1);
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        renderMainHistory();
+        renderHistory();
+    }
+
+    function renderMainHistory() {
+        const box = document.getElementById('main-history-list');
+        if (!box) return;
+        const history = getHistory();
+        if (history.length === 0) {
+            box.innerHTML = '<div class="history-empty">暂无抽取记录，点击「开始抽取」开始吧</div>';
+            return;
+        }
+
+        const groups = {};
+        history.forEach((item, idx) => {
+            const r = item.round || 1;
+            if (!groups[r]) groups[r] = [];
+            groups[r].push({ item, idx });
+        });
+
+        const rounds = Object.keys(groups).map(Number).sort((a, b) => {
+            if (a === currentRound) return -1;
+            if (b === currentRound) return 1;
+            return b - a;
+        });
+
+        let html = '';
+        rounds.forEach(r => {
+            const isCurrent = r === currentRound;
+            const cards = groups[r].map(({ item, idx }) => `
+                <div class="history-card">
+                    <div class="hc-thumb" style="${thumbStyle(item.hero)}" onclick="viewHistory(${idx})"></div>
+                    <div class="hc-content">
+                        <div class="hc-info" onclick="viewHistory(${idx})">
+                            <div class="hc-name">${item.hero}</div>
+                            <div class="hc-player">${item.player || '挑战者'}</div>
+                            <div class="hc-skill">${[item.skill, item.ult].filter(Boolean).join(' / ') || '—'}</div>
+                            <div class="hc-weapon">${[item.near, item.far].filter(Boolean).join(' · ') || '—'}</div>
+                        </div>
+                        <div class="hc-actions">
+                            <button class="btn btn-secondary btn-xs" onclick="event.stopPropagation(); viewHistory(${idx})">回放</button>
+                            <button class="btn btn-danger btn-xs" onclick="event.stopPropagation(); deleteHistoryItem(${idx})">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            html += `
+                <div class="round-group ${isCurrent ? 'current' : ''}">
+                    <div class="round-group-title">
+                        第 ${r} 轮 ${isCurrent ? '<span class="cur-tag">当前</span>' : ''}
+                    </div>
+                    <div class="round-cards">${cards}</div>
+                </div>
+            `;
+        });
+        box.innerHTML = html;
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        const history = getHistory();
+        if (history.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#666; padding:20px;">暂无记录</div>';
+            return;
+        }
+
+        const groups = {};
+        history.forEach((item, idx) => {
+            const r = item.round || 1;
+            if (!groups[r]) groups[r] = [];
+            groups[r].push({ item, idx });
+        });
+        const rounds = Object.keys(groups).map(Number).sort((a, b) => {
+            if (a === currentRound) return -1;
+            if (b === currentRound) return 1;
+            return b - a;
+        });
+
+        list.innerHTML = rounds.map(r => {
+            const isCurrent = r === currentRound;
+            const items = groups[r].map(({ item, idx }) => {
+                const skills = [item.skill, item.ult].filter(Boolean).join(' / ') || '—';
+                const weapons = [item.near, item.far].filter(Boolean).join(' · ') || '—';
+                return `
+                    <div class="history-item">
+                        <div class="hi-thumb" style="${thumbStyle(item.hero)}"></div>
+                        <div class="history-info">
+                            <strong>${item.player || '挑战者'}</strong> · <em>${item.hero}</em>
+                            <span class="hi-detail">${skills}　|　${weapons}</span>
+                        </div>
+                        <div class="hi-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="viewHistory(${idx})">回放</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteHistoryItem(${idx})">删除</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            return `
+                <div class="h-round-group ${isCurrent ? 'current' : ''}">
+                    <div class="h-round-title ${isCurrent ? 'current' : ''}">
+                        第 ${r} 轮 ${isCurrent ? '<span class="cur-tag">当前</span>' : ''}
+                    </div>
+                    ${items}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function viewHistory(index) {
+        const history = getHistory();
+        if (history[index]) {
+            toggleModal('history-modal', false);
+            showResult(history[index]);
+        }
+    }
+
+    function clearHistory() {
+        if (confirm("确定清空全部历史记录吗？")) {
+            sessionStorage.removeItem(STORAGE_KEY);
+            renderHistory();
+            renderMainHistory();
+        }
+    }
+
+    /* ================= 标题修改 ================= */
+    function openTitleModal() {
+        const currentTitle = document.getElementById('main-title').innerText;
+        document.getElementById('title-input').value = currentTitle;
+        toggleModal('title-modal', true);
+        setTimeout(() => document.getElementById('title-input').focus(), 100);
+    }
+
+    function saveTitle() {
+        const newTitle = document.getElementById('title-input').value.trim();
+        if (newTitle) {
+            document.getElementById('main-title').innerText = newTitle;
+            localStorage.setItem('naraka_custom_title', newTitle);
+        }
+        toggleModal('title-modal', false);
+    }
+
+    // 支持回车保存
+    document.getElementById('title-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            saveTitle();
+        }
+    });
+
+    /* ================= 初始化 ================= */
+    // 加载自定义标题
+    const savedTitle = localStorage.getItem('naraka_custom_title');
+    if (savedTitle) {
+        document.getElementById('main-title').innerText = savedTitle;
+    }
+
+    loadRosters();
+    readConfig();
+    updateRoundIndicator();
+    renderMainHistory();
+</script>
+</body>
+</html>
