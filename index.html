@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>洛花庄园随机抽取挑战</title>
+<!-- 引入 html2canvas 用于生成图片 -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
     :root {
         --gold: #c9a35e;
@@ -94,7 +96,6 @@
     .main-ui::-webkit-scrollbar { width: 4px; }
     .main-ui::-webkit-scrollbar-thumb { background: rgba(201, 163, 94, 0.3); border-radius: 2px; }
 
-    /* 标题与编辑按钮 */
     .title-wrapper {
         display: flex; align-items: center; justify-content: center; gap: 8px;
         flex-shrink: 0; padding: 0 20px;
@@ -243,7 +244,6 @@
         display: flex; gap: 12px; flex-wrap: wrap;
     }
 
-    /* 历史小卡片 */
     .history-card {
         flex: 0 0 auto;
         width: 195px;
@@ -338,6 +338,11 @@
         position: absolute; inset: -50px; background-size: cover; background-position: center;
         filter: blur(60px) brightness(0.3) saturate(1.2); z-index: 1;
     }
+    /* 截图区域 */
+    #capture-area {
+        position: absolute; inset: 0; z-index: 2;
+        background-color: transparent;
+    }
     .hero-img {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         object-fit: cover; object-position: center 15%; z-index: 2; transform: scale(1.3);
@@ -393,7 +398,6 @@
     .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
     .modal-footer { padding: 18px 20px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
 
-    /* 输入框样式 */
     .modal-input {
         width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border-gold);
         color: var(--gold-bright); padding: 12px; border-radius: 4px; font-size: 16px;
@@ -408,7 +412,6 @@
     .btn-add-player { background: rgba(255,255,255,0.03); border: 1px dashed var(--border-gold); color: var(--gold); padding: 12px; border-radius: 4px; cursor: pointer; text-align: center; width: 100%; margin-top: 10px; font-size: 14px; transition: all 0.2s; }
     .btn-add-player:hover { background: rgba(201,163,94,0.1); }
 
-    /* 分组选择器样式 */
     .roster-selector { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; flex-wrap: wrap; }
     .rs-label { font-size: 14px; color: var(--text-muted); white-space: nowrap; }
     .form-select {
@@ -423,7 +426,6 @@
     .chk-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-light); }
     .chk-item input { accent-color: var(--red-bright); width: 16px; height: 16px; }
 
-    /* 全部记录弹窗 */
     .history-list { display: flex; flex-direction: column; gap: 18px; }
     .h-round-group { display: flex; flex-direction: column; gap: 8px; }
     .h-round-title {
@@ -482,11 +484,12 @@
         .item-box img { width: 70px; height: 70px; }
         .item-box span { font-size: 14px; }
         .float-btn { width: 38px; height: 38px; font-size: 18px; }
-        .result-actions { bottom: 16px; }
-        .result-actions .btn { padding: 12px 40px; font-size: 17px; }
+        
+        .result-actions { bottom: 16px; width: 100%; justify-content: center; gap: 10px; }
+        .result-actions .btn { padding: 12px 20px; font-size: 16px; }
+        
         .hi-thumb { width: 68px; height: 38px; }
 
-        /* 移动端弹窗底部按钮适配 */
         .roster-selector { flex: 1 1 100%; }
         .modal-footer { justify-content: flex-end; gap: 10px; }
     }
@@ -499,7 +502,6 @@
 <div class="float-btn" id="btn-mute" title="静音">🔊</div>
 
 <div class="main-ui" id="main-ui">
-    <!-- 标题与编辑按钮 -->
     <div class="title-wrapper">
         <span id="main-title" class="rolling-title">洛花庄园随机抽取挑战</span>
         <button class="edit-title-btn" onclick="openTitleModal()" title="修改标题">✎</button>
@@ -535,7 +537,8 @@
             <span class="sb-title">规则</span>
             <div class="toggle-group">
                 <label class="toggle-item"><input type="checkbox" id="sw-player-no-repeat"> 选手不重复 <span class="toggle-switch"></span></label>
-                <label class="toggle-item"><input type="checkbox" id="sw-hero-no-repeat"> 英雄不重复 <span class="toggle-switch"></span></label>
+                <label class="toggle-item"><input type="checkbox" id="sw-hero-no-repeat"> 本轮英雄不重复 <span class="toggle-switch"></span></label>
+                <label class="toggle-item"><input type="checkbox" id="sw-hero-global-no-repeat"> 跨轮英雄不重复 <span class="toggle-switch"></span></label>
                 <label class="toggle-item"><input type="checkbox" id="sw-dual-wield"> 双刀流 <span class="toggle-switch"></span></label>
             </div>
         </div>
@@ -564,22 +567,28 @@
 <!-- 结果层 -->
 <div class="result-layer" id="result-layer">
     <div class="result-bg" id="result-bg"></div>
-    <img class="hero-img" id="hero-img" src="" alt="Hero">
-    <div class="vignette"></div>
-    <div class="bottom-panel">
-        <div class="player-info" id="player-info">
-            <img class="player-avatar" id="player-avatar" src="">
-            <div class="player-name" id="player-name"></div>
-        </div>
-        <div class="items-group">
-            <div class="item-box" id="item-skill"><img id="img-skill" src=""><span id="text-skill"></span></div>
-            <div class="item-box" id="item-ult"><img id="img-ult" src=""><span id="text-ult"></span></div>
-            <div class="item-box" id="item-near"><img id="img-near" src=""><span id="text-near"></span></div>
-            <div class="item-box" id="item-far"><img id="img-far" src=""><span id="text-far"></span></div>
+    
+    <!-- 核心截图区域 -->
+    <div id="capture-area">
+        <img class="hero-img" id="hero-img" src="" alt="Hero">
+        <div class="vignette"></div>
+        <div class="bottom-panel">
+            <div class="player-info" id="player-info">
+                <img class="player-avatar" id="player-avatar" src="">
+                <div class="player-name" id="player-name"></div>
+            </div>
+            <div class="items-group">
+                <div class="item-box" id="item-skill"><img id="img-skill" src=""><span id="text-skill"></span></div>
+                <div class="item-box" id="item-ult"><img id="img-ult" src=""><span id="text-ult"></span></div>
+                <div class="item-box" id="item-near"><img id="img-near" src=""><span id="text-near"></span></div>
+                <div class="item-box" id="item-far"><img id="img-far" src=""><span id="text-far"></span></div>
+            </div>
         </div>
     </div>
+
     <div class="result-actions">
         <button class="btn btn-secondary btn-lg" id="btn-back">返回主页</button>
+        <button class="btn btn-primary btn-lg" id="btn-share">分享战报</button>
     </div>
 </div>
 
@@ -597,7 +606,7 @@
     </div>
 </div>
 
-<!-- 自定义选手弹窗（集成分组选择与删除） -->
+<!-- 自定义选手弹窗 -->
 <div class="modal-overlay" id="player-modal">
     <div class="modal-content">
         <div class="modal-header"><span>自定义选手名单</span><span class="close-btn" onclick="toggleModal('player-modal', false)">×</span></div>
@@ -608,7 +617,12 @@
                 <select id="roster-select" class="form-select" onchange="handleRosterChange(this.value)"></select>
                 <button class="btn btn-danger btn-sm" id="btn-del-roster" onclick="deleteCurrentRoster()" title="删除当前选中的分组">删除此组</button>
             </div>
-            <button class="btn btn-primary" onclick="savePlayerList()">保存并应用</button>
+            <div style="display:flex; gap:10px; margin-left:auto;">
+                <button class="btn btn-secondary" onclick="exportRoster()">导出名单</button>
+                <button class="btn btn-secondary" onclick="triggerImport()">导入名单</button>
+                <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importRoster(event)">
+                <button class="btn btn-primary" onclick="savePlayerList()">保存并应用</button>
+            </div>
         </div>
     </div>
 </div>
@@ -665,13 +679,16 @@
 
     let playersList = [
         { name: "选手A", avatar: DEFAULT_AVATAR },
-        { name: "选手B", avatar: DEFAULT_AVATAR }
+        { name: "选手B", avatar: DEFAULT_AVATAR },
+        { name: "选手C", avatar: DEFAULT_AVATAR },
+        { name: "选手D", avatar: DEFAULT_AVATAR },
+        { name: "选手E", avatar: DEFAULT_AVATAR }
     ];
     const savedPlayers = localStorage.getItem('naraka_players');
     if (savedPlayers) { try { playersList = JSON.parse(savedPlayers); } catch(e) {} }
 
     let rosterGroups = [];
-    let currentRosterId = 'temp'; // 当前正在编辑的分组ID
+    let currentRosterId = 'temp'; 
 
     function loadRosters() {
         const saved = localStorage.getItem('naraka_rosters');
@@ -693,9 +710,10 @@
     let activeNear = [...ALL_NEAR];
     let activeFar = [...ALL_FAR];
 
-    let config = { player: true, skill: true, ult: true, near: true, far: true, noRepeatPlayer: false, noRepeatHero: false, dualWield: false };
+    let config = { player: true, skill: true, ult: true, near: true, far: true, noRepeatPlayer: false, noRepeatHero: false, noRepeatHeroGlobal: false, dualWield: false };
     let usedPlayers = [];
     let usedHeroes = [];
+    let globalUsedHeroes = []; 
     let currentRound = 1;
 
     let isMuted = false;
@@ -732,6 +750,7 @@
         config.far = document.getElementById('chk-far').checked;
         config.noRepeatPlayer = document.getElementById('sw-player-no-repeat').checked;
         config.noRepeatHero = document.getElementById('sw-hero-no-repeat').checked;
+        config.noRepeatHeroGlobal = document.getElementById('sw-hero-global-no-repeat').checked;
         config.dualWield = document.getElementById('sw-dual-wield').checked;
         syncSlotUI();
     }
@@ -759,9 +778,10 @@
 
     function checkRoundAdvance() {
         if (config.player && config.noRepeatPlayer) {
-            if (usedPlayers.length >= playersList.length) startNewRound();
-        } else if (config.noRepeatHero) {
-            if (usedHeroes.length >= activeHeroes.length) startNewRound();
+            if (usedPlayers.length >= playersList.length) {
+                startNewRound();
+                alert(`选手已全部抽取，自动进入第 ${currentRound} 轮！`);
+            }
         }
     }
 
@@ -769,7 +789,7 @@
     const getRandom = arr => arr[Math.floor(Math.random() * arr.length)];
 
     function openPlayerModal() {
-        currentRosterId = 'temp'; // 默认打开临时名单
+        currentRosterId = 'temp'; 
         renderRosterSelect();
         renderPlayerList();
         toggleModal('player-modal', true);
@@ -907,6 +927,47 @@
         alert("保存成功！");
     }
 
+    /* ================= 导入导出名单 ================= */
+    function exportRoster() {
+        syncPlayerDOM();
+        const dataStr = JSON.stringify(playersList, null, 2);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `naraka_roster_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function triggerImport() {
+        document.getElementById('import-file').click();
+    }
+
+    function importRoster(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (Array.isArray(imported) && imported.length > 0 && imported[0].name) {
+                    playersList = imported;
+                    renderPlayerList();
+                    alert("导入成功！请点击保存并应用。");
+                } else {
+                    alert("文件格式不正确！");
+                }
+            } catch (err) {
+                alert("读取文件失败，请确保是正确的 JSON 格式。");
+            }
+            event.target.value = ''; // 清空input
+        };
+        reader.readAsText(file);
+    }
+
     /* ================= 抽取池管理 ================= */
     let currentPoolType = '';
     function openPoolModal(type) {
@@ -924,7 +985,7 @@
     function savePool() {
         const selected = Array.from(document.querySelectorAll('#pool-list input:checked')).map(cb => cb.value);
         if (selected.length === 0) { alert("至少保留一个选项哦！"); return; }
-        if (currentPoolType === 'hero') { activeHeroes = selected; usedHeroes = []; }
+        if (currentPoolType === 'hero') { activeHeroes = selected; usedHeroes = []; globalUsedHeroes = []; }
         else if (currentPoolType === 'near') activeNear = selected;
         else if (currentPoolType === 'far') activeFar = selected;
         toggleModal('pool-modal', false);
@@ -1004,12 +1065,25 @@
         if (config.player && config.noRepeatPlayer && finalPlayer) usedPlayers.push(finalPlayer.name);
 
         let availableHeroes = [...activeHeroes];
-        if (config.noRepeatHero) {
+        if (config.noRepeatHeroGlobal) {
+            availableHeroes = activeHeroes.filter(h => !globalUsedHeroes.includes(h));
+            if (availableHeroes.length === 0) {
+                alert("英雄已在跨轮次中全部抽取完毕！将自动重置英雄跨轮记录。");
+                globalUsedHeroes = [];
+                availableHeroes = [...activeHeroes];
+            }
+        } else if (config.noRepeatHero) {
             availableHeroes = activeHeroes.filter(h => !usedHeroes.includes(h));
             if (availableHeroes.length === 0) { usedHeroes = []; availableHeroes = [...activeHeroes]; }
         }
+        
         const finalHero = getRandom(availableHeroes);
-        if (config.noRepeatHero) usedHeroes.push(finalHero);
+        
+        if (config.noRepeatHeroGlobal) {
+            globalUsedHeroes.push(finalHero);
+        } else if (config.noRepeatHero) {
+            usedHeroes.push(finalHero);
+        }
 
         const finalSkill = config.skill ? getRandom(HERO_DATA[finalHero].f) : null;
         const finalUlt = config.ult ? getRandom(HERO_DATA[finalHero].v) : null;
@@ -1084,7 +1158,9 @@
             el.style.transform = `translateY(0)`;
         });
         renderMainHistory();
-        alert(`已开启新一轮！当前为第 ${currentRound} 轮，去重记录已清空。`);
+        let msg = `已开启新一轮！当前为第 ${currentRound} 轮。`;
+        if (config.noRepeatHeroGlobal) msg += `\n（跨轮英雄去重记录已保留）`;
+        alert(msg);
     });
 
     /* ================= 结果展示 ================= */
@@ -1145,7 +1221,64 @@
         renderMainHistory();
     }
 
+    // 修复后的截图分享功能
+    function shareImage() {
+        const captureArea = document.getElementById('capture-area');
+        
+        // 配置 html2canvas
+        html2canvas(captureArea, {
+            useCORS: true,
+            allowTaint: true, // 允许加载本地/跨域图片
+            scale: 2,
+            backgroundColor: '#0a0a0c',
+            onclone: (clonedDoc) => {
+                // 在克隆的 DOM 中处理不支持渲染的 CSS
+                const img = clonedDoc.getElementById('hero-img');
+                if (img) {
+                    // 移除遮罩，否则生成图片会失败或黑屏
+                    img.style.maskImage = 'none';
+                    img.style.webkitMaskImage = 'none';
+                    // 确保没有任何缩放动画残留
+                    img.style.transform = 'scale(1)';
+                }
+                // 确保整体可见
+                const layer = clonedDoc.getElementById('result-layer');
+                if(layer) {
+                    layer.style.opacity = '1';
+                    layer.style.pointerEvents = 'auto';
+                }
+            }
+        }).then(canvas => {
+            // 尝试复制到剪贴板
+            canvas.toBlob(blob => {
+                if (navigator.clipboard && window.ClipboardItem) {
+                    const item = new ClipboardItem({ "image/png": blob });
+                    navigator.clipboard.write([item]).then(() => {
+                        alert("战报图片已复制到剪贴板，快去群里粘贴吧！");
+                    }).catch(err => {
+                        console.warn("剪贴板拦截，转为下载", err);
+                        downloadCanvas(canvas);
+                    });
+                } else {
+                    downloadCanvas(canvas);
+                }
+            });
+        }).catch(err => {
+            console.error("生成图片报错:", err);
+            alert("生成图片失败！由于本地安全限制，请确保网页是通过 http:// 运行的（如用 VSCode Live Server 打开），或者使用 QQ/微信 截图功能。");
+        });
+    }
+
+    function downloadCanvas(canvas) {
+        const link = document.createElement('a');
+        link.download = `naraka_share_${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        alert("浏览器不支持直接复制，已自动为你下载战报图片。");
+    }
+
     document.getElementById('btn-back').addEventListener('click', closeResult);
+    document.getElementById('btn-share').addEventListener('click', shareImage);
     document.getElementById('start-btn').addEventListener('click', startDraw);
 
     /* ================= 历史记录 ================= */
@@ -1203,7 +1336,8 @@
         let html = '';
         rounds.forEach(r => {
             const isCurrent = r === currentRound;
-            const cards = groups[r].map(({ item, idx }) => `
+            const cards = groups[r].map(({ item, idx }) => {
+                return `
                 <div class="history-card">
                     <div class="hc-thumb" style="${thumbStyle(item.hero)}" onclick="viewHistory(${idx})"></div>
                     <div class="hc-content">
@@ -1219,7 +1353,8 @@
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             html += `
                 <div class="round-group ${isCurrent ? 'current' : ''}">
                     <div class="round-group-title">
@@ -1257,6 +1392,7 @@
             const items = groups[r].map(({ item, idx }) => {
                 const skills = [item.skill, item.ult].filter(Boolean).join(' / ') || '—';
                 const weapons = [item.near, item.far].filter(Boolean).join(' · ') || '—';
+                
                 return `
                     <div class="history-item">
                         <div class="hi-thumb" style="${thumbStyle(item.hero)}"></div>
@@ -1315,7 +1451,6 @@
         toggleModal('title-modal', false);
     }
 
-    // 支持回车保存
     document.getElementById('title-input').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             saveTitle();
@@ -1323,7 +1458,6 @@
     });
 
     /* ================= 初始化 ================= */
-    // 加载自定义标题
     const savedTitle = localStorage.getItem('naraka_custom_title');
     if (savedTitle) {
         document.getElementById('main-title').innerText = savedTitle;
